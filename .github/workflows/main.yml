@@ -1,0 +1,25 @@
+name: Build iOS Dylib
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Compile Dylib
+        run: |
+          xcrun -sdk iphoneos clang -dynamiclib -arch arm64 \
+          -isysroot $(xcrun --sdk iphoneos --show-sdk-path) \
+          main.mm -o StS2Mod.dylib \
+          -framework Foundation \
+          -framework UIKit \
+          -I.
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StS2Mod-Dylib
+          path: StS2Mod.dylib
