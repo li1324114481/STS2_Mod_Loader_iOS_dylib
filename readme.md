@@ -23,3 +23,6 @@
 游戏启动后会弹窗显示*“检测到 Documents/mods 存在”* 
 
 此时代表插件注入成功，且mod被识别。
+
+## 开源协议
+本项目采用 [MIT License](LICENSE) 开源协议。
