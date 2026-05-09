@@ -74,29 +74,36 @@
 @end
 
 // ---------------------------------------------------------
-// 启动弹窗检测
+// 启动初始化与文件夹强制创建
 // ---------------------------------------------------------
 __attribute__((constructor))
-static void init() {
+static void sts2_loader_init() {
+    // 插件一被加载，立刻强制创建目录
+    NSString *docs = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+    NSString *fakeBundlePath = [docs stringByAppendingPathComponent:@"FakeBundle.app"];
+    NSString *modsPath = [docs stringByAppendingPathComponent:@"mods"];
+    NSFileManager *fm = [NSFileManager defaultManager];
+
+    if (![fm fileExistsAtPath:modsPath]) {
+        [fm createDirectoryAtPath:modsPath withIntermediateDirectories:YES attributes:nil error:nil];
+    }
+    if (![fm fileExistsAtPath:fakeBundlePath]) {
+        [fm createDirectoryAtPath:fakeBundlePath withIntermediateDirectories:YES attributes:nil error:nil];
+    }
+
+    // 延迟 3 秒弹窗检测
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        NSString *docs = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
-        NSString *modsPath = [docs stringByAppendingPathComponent:@"mods"];
-        BOOL docsExist = [[NSFileManager defaultManager] fileExistsAtPath:modsPath];
-        
-        NSString *msg = docsExist ? @"Mod 引擎加载成功\n请在『文件』App中管理 Documents/mods" : @"初始化失败";
+        BOOL docsExist = [fm fileExistsAtPath:modsPath];
+        NSString *msg = docsExist ? @"Mod 引擎已强制加载\n请在『文件』App中查看" : @"目录创建失败";
         
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"STS2 Mod Loader" 
                                    message:msg 
                                    preferredStyle:UIAlertControllerStyleAlert];
         [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
         
-        // 更安全的获取 RootViewController 的方式
         UIWindow *keyWindow = nil;
         for (UIWindow *window in [UIApplication sharedApplication].windows) {
-            if (window.isKeyWindow) {
-                keyWindow = window;
-                break;
-            }
+            if (window.isKeyWindow) { keyWindow = window; break; }
         }
         [keyWindow.rootViewController presentViewController:alert animated:YES completion:nil];
     });
