@@ -1,4 +1,4 @@
-name: Build Tweak Dylib
+name: Build Native Dylib
 
 on:
   push:
@@ -12,19 +12,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         
-      - name: Install Theos
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compile via Apple Clang
         run: |
-          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+          # 自动将可能存在的 .x 文件重命名为纯苹果原生的 .m 文件
+          find . -type f -name "*.x" | while read f; do mv "$f" "${f%.x}.m"; done
           
-      - name: Build Dylib
-        run: |
-          export THEOS=~/theos
-          make FINALPACKAGE=1
+          # 收集仓库里所有的 .m 源文件
+          SRC_FILES=$(find . -type f -name "*.m")
+          echo "找到的源代码文件: $SRC_FILES"
+          
+          # 获取苹果 iOS SDK 的系统底层路径
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+          
+          # 🔥 核心：直接调用苹果官方编译器打包生成 dylib！
+          clang -dynamiclib -arch arm64 -isysroot $SDK_PATH -fobjc-arc -framework Foundation -framework UIKit $SRC_FILES -o STS2_Mod_Loader.dylib
           
       - name: Upload Dylib
         uses: actions/upload-artifact@v4
         with:
           name: STS2_Mod_Loader_Dylib
-          path: .theos/obj/**/*.dylib
+          path: STS2_Mod_Loader.dylib
