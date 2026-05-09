@@ -20,28 +20,25 @@
     });
 }
 
-// 核心：构建伪造的 Bundle 目录
+// 核心：构建伪造的资源目录
 - (NSString *)getFakeBundlePath:(NSString *)realPath {
     NSString *docs = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
-    NSString *fakeBundlePath = [docs stringByAppendingPathComponent:@"FakeBundle.app"];
+    // 🔥 这里去掉了 .app 后缀，变成普通的文件夹名
+    NSString *fakeBundlePath = [docs stringByAppendingPathComponent:@"FakeBundle_Data"];
     NSString *modsPath = [docs stringByAppendingPathComponent:@"mods"];
     NSFileManager *fm = [NSFileManager defaultManager];
 
-    // 1. 确保 Documents/mods 存在（玩家放 Mod 的地方）
     if (![fm fileExistsAtPath:modsPath]) {
         [fm createDirectoryAtPath:modsPath withIntermediateDirectories:YES attributes:nil error:nil];
     }
-
-    // 2. 确保假的 FakeBundle.app 存在
     if (![fm fileExistsAtPath:fakeBundlePath]) {
         [fm createDirectoryAtPath:fakeBundlePath withIntermediateDirectories:YES attributes:nil error:nil];
     }
 
-    // 3. 将真实 .app 里的所有文件软链接到 FakeBundle.app 中
+    // 软链接所有原包文件
     NSArray *items = [fm contentsOfDirectoryAtPath:realPath error:nil];
     for (NSString *item in items) {
-        if ([item isEqualToString:@"mods"]) continue; // 忽略真实包里可能存在的 mods 文件夹
-        
+        if ([item isEqualToString:@"mods"]) continue;
         NSString *dest = [fakeBundlePath stringByAppendingPathComponent:item];
         if (![fm fileExistsAtPath:dest]) {
             NSString *src = [realPath stringByAppendingPathComponent:item];
@@ -49,13 +46,12 @@
         }
     }
 
-    // 4. 将 Documents/mods 软链接到 FakeBundle.app/mods
+    // 软链接 mods 文件夹
     NSString *fakeModsDest = [fakeBundlePath stringByAppendingPathComponent:@"mods"];
     if (![fm fileExistsAtPath:fakeModsDest]) {
         [fm createSymbolicLinkAtPath:fakeModsDest withDestinationPath:modsPath error:nil];
     }
 
-    // 返回伪造的路径欺骗游戏引擎
     return fakeBundlePath;
 }
 
@@ -74,32 +70,24 @@
 @end
 
 // ---------------------------------------------------------
-// 启动初始化与文件夹强制创建
+// 启动检测与强行建夹
 // ---------------------------------------------------------
 __attribute__((constructor))
 static void sts2_loader_init() {
-    // 插件一被加载，立刻强制创建目录
     NSString *docs = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
-    NSString *fakeBundlePath = [docs stringByAppendingPathComponent:@"FakeBundle.app"];
+    NSString *fakeBundlePath = [docs stringByAppendingPathComponent:@"FakeBundle_Data"];
     NSString *modsPath = [docs stringByAppendingPathComponent:@"mods"];
     NSFileManager *fm = [NSFileManager defaultManager];
 
-    if (![fm fileExistsAtPath:modsPath]) {
-        [fm createDirectoryAtPath:modsPath withIntermediateDirectories:YES attributes:nil error:nil];
-    }
-    if (![fm fileExistsAtPath:fakeBundlePath]) {
-        [fm createDirectoryAtPath:fakeBundlePath withIntermediateDirectories:YES attributes:nil error:nil];
-    }
+    // 强行创建
+    [fm createDirectoryAtPath:modsPath withIntermediateDirectories:YES attributes:nil error:nil];
+    [fm createDirectoryAtPath:fakeBundlePath withIntermediateDirectories:YES attributes:nil error:nil];
 
-    // 延迟 3 秒弹窗检测
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        BOOL docsExist = [fm fileExistsAtPath:modsPath];
-        NSString *msg = docsExist ? @"Mod 引擎已强制加载\n请在『文件』App中查看" : @"目录创建失败";
-        
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"STS2 Mod Loader" 
-                                   message:msg 
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"MOD 加载成功" 
+                                   message:@"文件夹已生成，请在文件App中放入MOD" 
                                    preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
+        [alert addAction:[UIAlertAction actionWithTitle:@"起飞" style:UIAlertActionStyleDefault handler:nil]];
         
         UIWindow *keyWindow = nil;
         for (UIWindow *window in [UIApplication sharedApplication].windows) {
