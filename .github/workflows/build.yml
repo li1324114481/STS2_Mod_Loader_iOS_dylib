@@ -14,18 +14,11 @@ jobs:
         
       - name: Compile via Apple Clang
         run: |
-          # 自动将可能存在的 .x 文件重命名为纯苹果原生的 .m 文件
           find . -type f -name "*.x" | while read f; do mv "$f" "${f%.x}.m"; done
-          
-          # 收集仓库里所有的 .m 源文件
           SRC_FILES=$(find . -type f -name "*.m")
-          echo "找到的源代码文件: $SRC_FILES"
-          
-          # 获取苹果 iOS SDK 的系统底层路径
           SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
           
-          # 🔥 核心：直接调用苹果官方编译器打包生成 dylib！
-          clang -dynamiclib -arch arm64 -isysroot $SDK_PATH -fobjc-arc -framework Foundation -framework UIKit $SRC_FILES -o STS2_Mod_Loader.dylib
+          clang -dynamiclib -arch arm64 -isysroot $SDK_PATH -fobjc-arc -framework Foundation -framework UIKit -install_name @rpath/STS2_Mod_Loader.dylib $SRC_FILES -o STS2_Mod_Loader.dylib
           
       - name: Upload Dylib
         uses: actions/upload-artifact@v4
